@@ -1,52 +1,135 @@
 <%
+var UnrealTypeInfo = function(name,type) {
+	this.name = name;
+	this.type = type;
+};
+function MakeUniqueProperties(propertyInfos) {
+	var counts = [];
+	var results = [];
+	for (var propertyInfoIndex in propertyInfos) {
+		var propertyInfo = propertyInfos[propertyInfoIndex];
+		var newName;
+		if (counts[propertyInfo.name] == undefined) {
+			counts[propertyInfo.name] = 1;
+			newName = propertyInfo.name;
+		} else {
+			counts[propertyInfo.name] = counts[propertyInfo.name] + 1;
+			newName = propertyInfo.name + counts[propertyInfo.name];
+		}
+		results.push(new UnrealTypeInfo(newName, propertyInfo.type));
+	}
+	return results;
+}
+function IsTypeLiteral(fieldType) {
+	if (fieldType == undefined) {
+		return false;
+	} else if (fieldType == "Boolean") {
+		return true;
+	} else if (fieldType == "DateTime") {
+		return true;
+	} else if (fieldType == "double") {
+		return true;
+	} else if (fieldType == "int32") {
+		return true;
+	} else if (fieldType == "String") {
+		return true;
+	} else if (fieldType == "uint32") {
+		return true;
+	} else {
+		return false;
+	}
+}
 function GetUnrealType(fieldType) {
-	if (fieldType == "Boolean") {
+	if (fieldType == undefined) {
+		return "FString /* undefined */";
+	} else if (fieldType == "Boolean") {
 		return "bool";
 	} else if (fieldType == "DateTime") {
-		return "int32";
+		return "int32 /* DateTime */";
+	} else if (fieldType == "double") {
+		return "double";
 	} else if (fieldType == "int32") {
 		return "int32";
 	} else if (fieldType == "String") {
 		return "FString";
+	} else if (fieldType == "uint32") {
+		return "int32 /* uint32 is not supported by blueprints */";
 	} else {
 		if (api == undefined) {
-			return fieldType + " /*api undefined*/";
+			return "FString /* " + fieldType+" api undefined*/";
 		} else if (api.datatypes == undefined) {
-			return fieldType + " /*datatypes undefined*/";
+			return "FString /* " + fieldType+" datatypes undefined*/";
 		} else if (api.datatypes[fieldType] == undefined) {
-			return fieldType + " /* field does not exist */";
+			return "FString /* " + fieldType+" field does not exist */";
 		} else if (api.datatypes[fieldType].properties == undefined) {
-			return fieldType + " /* field does not exist */";
+			return "FString /* " + fieldType+" field does not exist */";
 		}
-		return fieldType+" /*properties="+api.datatypes[fieldType].properties.length+"*/";
+		return "FString /* " + fieldType+" complex type*/";
+	}
+}
+function GetExpandedPropertyInfo(propertyTypes, fieldType, propertyName) {
+	propertyName = LowerCaseFirstLetter(propertyName);
+	if (fieldType == undefined) {
+		propertyTypes.push(new UnrealTypeInfo(propertyName, GetUnrealType(fieldType)));
+		return;
+	} else if (IsTypeLiteral(fieldType)) {
+		propertyTypes.push(new UnrealTypeInfo(propertyName, GetUnrealType(fieldType)));
+		return;
+	} else {
+		if (api == undefined) {
+			propertyTypes.push(new UnrealTypeInfo(propertyName, GetUnrealType(fieldType)));
+			return;
+		} else if (api.datatypes == undefined) {
+			propertyTypes.push(new UnrealTypeInfo(propertyName, GetUnrealType(fieldType)));
+			return;
+		} else if (api.datatypes[fieldType] == undefined) {
+			propertyTypes.push(new UnrealTypeInfo(propertyName, GetUnrealType(fieldType)));
+			return;
+		} else if (api.datatypes[fieldType].properties == undefined) {
+			propertyTypes.push(new UnrealTypeInfo(propertyName, GetUnrealType(fieldType)));
+			return;
+		}
+		var properties = api.datatypes[fieldType].properties;
+		for(var propertyObject in properties) {
+			var property = properties[propertyObject];
+			GetExpandedPropertyInfo(propertyTypes, property.actualtype, property.name);
+		}
 	}
 }
 function LowerCaseFirstLetter(name) {
-	var copy = name.substring(0, 1).toLowerCase() + name.substring(1);
-	return copy;
-}
-function GetDelegateMacro(properties) {
-	if (properties.length == 1) {
-		return "DECLARE_DYNAMIC_DELEGATE_OneParam";
-	} else if (properties.length == 2) {
-		return "DECLARE_DYNAMIC_DELEGATE_TwoParams";
-	} else if (properties.length == 3) {
-		return "DECLARE_DYNAMIC_DELEGATE_ThreeParams";
-	} else if (properties.length == 4) {
-		return "DECLARE_DYNAMIC_DELEGATE_FourParams";
-	} else if (properties.length == 5) {
-		return "DECLARE_DYNAMIC_DELEGATE_FiveParams";
-	} else if (properties.length == 6) {
-		return "DECLARE_DYNAMIC_DELEGATE_SixParams";
-	} else if (properties.length == 7) {
-		return "DECLARE_DYNAMIC_DELEGATE_SevenParams";
-	} else if (properties.length == 8) {
-		return "DECLARE_DYNAMIC_DELEGATE_EightParams";
-	} else if (properties.length == 9) {
-		return "DECLARE_DYNAMIC_DELEGATE_NineParams";
+	if (name.length > 1) {
+		var copy = name.substring(0, 1).toLowerCase() + name.substring(1);
+		return copy;
 	} else {
-		return "DECLARE_DYNAMIC_DELEGATE";
+		return name.toLowerCase();
 	}
+}
+function GetDelegateMacro(i) {
+	var ones = [ "", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine" ];
+    var teens = [ "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen" ];
+    var tens = [ "", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety" ];
+	var prefix = "DECLARE_DYNAMIC_DELEGATE";
+	var result = prefix;
+	if (i > 0) {
+		result += "_";
+		var strNumber = "";
+		if (i < 10) {
+			strNumber = ones[i];
+		} else if (i < 20) {
+			strNumber = teens[i-10];
+		} else if (i < 100) {
+			strNumber = tens[Math.floor(i/10)] + ones[i%10];
+		}
+		result += strNumber;
+		result += "Param";
+		if (i > 1) {
+			result += "s";
+		}
+	}
+	if (i > 10) {
+		console.log("i="+i+" "+result);
+	}
+	return result;
 }
 %>
 #pragma once
@@ -129,13 +212,27 @@ public:
 <%            %>    UFUNCTION(BlueprintCallable, Category = "PlayFab | <%- api.name %> | <%- api.subgroups[subgroup].name %> ", meta = (BlueprintInternalUseOnly = "true", DeprecatedFunction))
 <%            %>        static UPlayFab<%- api.name %>API* <%- apiCall.name %>(F<%- api.name %><%- apiCall.request %> request);
 <%            %>
-<%            %>    // callbacks
-<%            %>    <%- GetDelegateMacro(api.datatypes[apiCall.result].properties) %>(FDelegateOnSuccess<%- apiCall.name %><%
-				var properties = api.datatypes[apiCall.result].properties;
-				for(var propertyObject in properties) {
-				var first = true;
-				var property = properties[propertyObject];
-					%>, <%- GetUnrealType(property.actualtype) %>, <%- LowerCaseFirstLetter(property.name) %><%
+<%
+				var propertyInfos = [];
+				if (api.datatypes[apiCall.result] == undefined) {
+					console.log("Error: apiCall.result datatype does not exist="+apiCall.result);
+				} else {
+					var properties = api.datatypes[apiCall.result].properties;
+					if (properties == undefined) {
+						console.log("Error: apiCall.result properties are undefined="+apiCall.result);
+					} else {
+						for(var propertyObject in properties) {
+							var property = properties[propertyObject];
+							GetExpandedPropertyInfo(propertyInfos, property.actualtype, property.name);
+						}
+					}
+				}
+				var propertyInfos2 = MakeUniqueProperties(propertyInfos);
+              %>    // callbacks
+<%            %>    <%- GetDelegateMacro(propertyInfos2.length) %>(FDelegateOnSuccess<%- apiCall.name %><%
+				for (var propertyInfoIndex in propertyInfos2) {
+					var propertyInfo = propertyInfos2[propertyInfoIndex];
+					%>, <%- propertyInfo.type %>, <%- propertyInfo.name %><%
 				}
               %>);
 <%            %>    DECLARE_DYNAMIC_DELEGATE_FourParams(FDelegateOnFailure<%- apiCall.name %>, int32, errorCode, FString, errorName, FString, errorMessage, FString, errorDetails);
