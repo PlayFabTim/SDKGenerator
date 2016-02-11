@@ -208,45 +208,17 @@ public:
             if(apiCall.subgroup == api.subgroups[subgroup].name)
             {
 
-            %>    /** <%- apiCall.summary %> */
+              %>    /** <%- apiCall.summary %> */
 <%            %>    UFUNCTION(BlueprintCallable, Category = "PlayFab | <%- api.name %> | <%- api.subgroups[subgroup].name %> ", meta = (BlueprintInternalUseOnly = "true", DeprecatedFunction))
 <%            %>        static UPlayFab<%- api.name %>API* <%- apiCall.name %>(F<%- api.name %><%- apiCall.request %> request);
 <%            %>
-<%
-				var propertyInfos = [];
-				if (api.datatypes[apiCall.result] == undefined) {
-					console.log("Error: apiCall.result datatype does not exist="+apiCall.result);
-				} else {
-					var properties = api.datatypes[apiCall.result].properties;
-					if (properties == undefined) {
-						console.log("Error: apiCall.result properties are undefined="+apiCall.result);
-					} else {
-						for(var propertyObject in properties) {
-							var property = properties[propertyObject];
-							GetExpandedPropertyInfo(propertyInfos, property.actualtype, property.name);
-						}
-					}
-				}
-				var propertyInfos2 = MakeUniqueProperties(propertyInfos);
-              %>    // callbacks
-<%            %>    <%- GetDelegateMacro(propertyInfos2.length) %>(FDelegateOnSuccess<%- apiCall.name %><%
-				for (var propertyInfoIndex in propertyInfos2) {
-					var propertyInfo = propertyInfos2[propertyInfoIndex];
-					%>, <%- propertyInfo.type %>, <%- propertyInfo.name %><%
-				}
-              %>);
+<%            %>    // callbacks
+<%            %>    DECLARE_DYNAMIC_DELEGATE_OneParam(FDelegateOnSuccess<%- apiCall.name %>, F<%- api.name %><%- apiCall.result %>, result);
 <%            %>    DECLARE_DYNAMIC_DELEGATE_FourParams(FDelegateOnFailure<%- apiCall.name %>, int32, errorCode, FString, errorName, FString, errorMessage, FString, errorDetails);
 <%            %>
 <%            %>    /** <%- apiCall.summary %> */
 <%            %>	UFUNCTION(BlueprintCallable, Category = "PlayFab | <%- api.name %> | <%- api.subgroups[subgroup].name %> ", meta = (BlueprintInternalUseOnly = "true"))
-<%            %>	static UPlayFab<%- api.name %>API* PlayFab<%- apiCall.name %>(<%
-				var properties = api.datatypes[apiCall.request].properties;
-				for(var propertyObject in properties) {
-					var property = properties[propertyObject];
-              %>
-<%            %>		<%- GetUnrealType(property.actualtype) %> <%- LowerCaseFirstLetter(property.name) %>,<%
-				}
-              %>
+<%            %>	static UPlayFab<%- api.name %>API* PlayFab<%- apiCall.name %>(F<%- api.name %><%- apiCall.request %> request,
 <%            %>		FDelegateOnSuccess<%- apiCall.name %> onSuccess,
 <%            %>    	FDelegateOnFailure<%- apiCall.name %> onFailure);
 <%            %>
@@ -274,7 +246,26 @@ public:
 private:
     /** Internal bind function for the IHTTPRequest::OnProcessRequestCompleted() event */
     void OnProcessRequestComplete(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful);
-
+<%
+    for(var subgroup in api.subgroups)
+    {
+        for(var i in api.calls)
+        {
+            var apiCall = api.calls[i];
+            if(apiCall.subgroup == api.subgroups[subgroup].name)
+            {
+				var apiCall = api.calls[i];
+				if(apiCall.subgroup == api.subgroups[subgroup].name)
+				{
+						%>
+<%						%>	FDelegateOnSuccess<%- apiCall.name %> OnSuccess<%- apiCall.name %>;
+<%						%>	FDelegateOnFailure<%- apiCall.name %> OnFailure<%- apiCall.name %>;
+<%
+				}
+			}
+		}
+	}
+%>
 protected:
 
     /** Internal request data stored as JSON */

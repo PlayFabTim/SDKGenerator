@@ -407,51 +407,13 @@ for(var subgroup in api.subgroups)
 <%            %>}
 <%            %>
 <%            %>/** <%- apiCall.summary %> */
-<%            %>UPlayFab<%- api.name %>API* UPlayFab<%- api.name %>API::PlayFab<%- apiCall.name %>(<%
-				var properties = api.datatypes[apiCall.request].properties;
-				for(var propertyObject in properties) {
-					var property = properties[propertyObject];
-              %>
-<%            %>	<%- GetUnrealType(property.actualtype) %> <%- LowerCaseFirstLetter(property.name) %>,<%
-				}
-              %>
+<%            %>UPlayFab<%- api.name %>API* UPlayFab<%- api.name %>API::PlayFab<%- apiCall.name %>(F<%- api.name %><%- apiCall.request %> request,
 <%            %>	FDelegateOnSuccess<%- apiCall.name %> onSuccess,
 <%            %>    FDelegateOnFailure<%- apiCall.name %> onFailure)
 <%            %>{
 <%            %>    // Objects containing request data
 <%            %>    UPlayFab<%- api.name %>API* manager = NewObject<UPlayFab<%- api.name %>API>();
 <%            %>	if (onSuccess.IsBound()) {
-<%            %>		onSuccess.Execute(<%
-				var propertyInfos = [];
-				if (api.datatypes[apiCall.result] == undefined) {
-					console.log("Error: apiCall.result datatype does not exist="+apiCall.result);
-				} else {
-					var properties = api.datatypes[apiCall.result].properties;
-					if (properties == undefined) {
-						console.log("Error: apiCall.result properties are undefined="+apiCall.result);
-					} else {
-						for(var propertyObject in properties) {
-							var property = properties[propertyObject];
-							GetExpandedPropertyInfo(propertyInfos, property.actualtype, property.name);
-						}
-					}
-				}
-				var propertyInfos2 = MakeUniqueProperties(propertyInfos);
-				var first = true;
-				for (var propertyInfoIndex in propertyInfos2) {
-					var propertyInfo = propertyInfos2[propertyInfoIndex];
-					if (first) {
-						first = false;
-					} else {
-						%>, <%
-					}
-					if (propertyInfo.type.startsWith("FString")) {
-						%>"<%- propertyInfo.name %>"<%
-					} else {
-						%>0<%
-					}
-				}
-										%>);
 <%            %>	}
 <%            %>	return manager;
 <%            %>}
