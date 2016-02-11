@@ -622,7 +622,7 @@ for(var subgroup in api.subgroups)
 <%            %>	else
 <%            %>	{
 <%
-
+				var found = false;
                 for(var i2 in api.datatypes)
                 {
                     var datatype = api.datatypes[i2];
@@ -643,6 +643,7 @@ for(var subgroup in api.subgroups)
                     if(datatype.name.substr(datatype.name.length - 7) == "Request") {continue;} // go to next model if it is a request
 					
 					if (datatype.name == apiCall.result) {
+						found = true;
 
               %>		F<%- api.name %><%- apiCall.result %> result = UPlayFab<%- api.name %>ModelDecoder::decode<%- datatype.name %>Response(response.responseData);
 <%            %>		if (OnSuccess<%- apiCall.name %>.IsBound())
@@ -650,7 +651,17 @@ for(var subgroup in api.subgroups)
 <%            %>			OnSuccess<%- apiCall.name %>.Execute(result);
 <%            %>		}
 <%
+						break;
 					}
+				}
+				
+				if (!found) {
+              %>		F<%- api.name %><%- apiCall.result %> result = UPlayFab<%- api.name %>ModelDecoder::decode<%- apiCall.result %>Response(response.responseData);
+<%            %>		if (OnSuccess<%- apiCall.name %>.IsBound())
+<%            %>		{
+<%            %>			OnSuccess<%- apiCall.name %>.Execute(result);
+<%            %>		}
+<%
 				}
 				
               %>	}
